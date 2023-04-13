@@ -34,5 +34,9 @@ plt.yscale('log')
 
 
 
+<<<<<<< HEAD
 plt.show()
 
+=======
+plt.show()
+>>>>>>> 4d00831d2e036541d649fc2fa6661f0e25d3c3a7
