@@ -92,6 +92,12 @@ warnings.filterwarnings('ignore', message='Polyfit may be poorly conditioned', c
 r2_list = []
 max_r2 = 0
 ax3.plot('wavelength', 'measured_transmission', data=wavelength_data, label='')
+# Extract wavelength at the max, min value of transmission
+transmission_max, transmission_min = max(wavelength_data['measured_transmission']), min(wavelength_data['measured_transmission'])
+wavelength_max, wavelength_min = wavelength_data['wavelength'][wavelength_data['measured_transmission'].index(transmission_max)], wavelength_data['wavelength'][wavelength_data['measured_transmission'].index(transmission_min)]
+print(f'wavelength_min: {wavelength_min}nm\n'
+      f'wavelength_max: {wavelength_max}nm')
+
 for i in range(1, 9):
     color = cmap(i / 9)
     fp = np.polyfit(wavelength_data['wavelength'], wavelength_data['measured_transmission'], i)
