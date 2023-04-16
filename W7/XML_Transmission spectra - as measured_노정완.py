@@ -102,7 +102,7 @@ wavelength_max, wavelength_min = wavelength_data['wavelength'][
     wavelength_data['measured_transmission'].index(transmission_max)], wavelength_data['wavelength'][
     wavelength_data['measured_transmission'].index(transmission_min)]
 print(f'wavelength_min: {wavelength_min}nm, transmission_min: {transmission_min}dB\n'
-      f'wavelength_max: {wavelength_max}nm, transmission_min: {transmission_max}dB')
+      f'wavelength_max: {wavelength_max}nm, transmission_max: {transmission_max}dB')
 
 for i in range(1, 9):
     color = cmap(i / 9)

@@ -3,8 +3,8 @@
 /workspace.xml
 
 /.idea/*
-
 /venv/*
+/data set/*.xml
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,windows,pycharm,jetbrains
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,windows,pycharm,jetbrains
