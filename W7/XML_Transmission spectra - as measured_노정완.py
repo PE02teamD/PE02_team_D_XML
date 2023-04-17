@@ -1,3 +1,4 @@
+import csv
 import xml.etree.ElementTree as elemTree
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +17,7 @@ root = tree.getroot()  # 해당 트리의 root를 반환
 # Handle subplot
 fig, axs = plt.subplots(2, 3, figsize=(18, 8))
 # Increase the horizontal and vertical spacing between subplots
-fig.subplots_adjust(hspace=0.5, wspace=0.3)
+fig.subplots_adjust(hspace=0.5, wspace=0.5)
 # Numbering each subplot
 ax1, ax2, ax3 = axs[1][0], axs[0][0], axs[0][1]
 # Hide other graph
@@ -34,26 +35,29 @@ for iv_measurement in root.iter('IVMeasurement'):
     iv_data['voltage'].extend(voltage)
     iv_data['current'].extend(current_abs)
 
-I_s=iv_data['current'][0]
-# Threshold voltage 기준으로 구간 설정
-x_bef_Vth, x_aft_Vth = iv_data['voltage'][:10], iv_data['voltage'][9:]
-y_bef_Vth, y_aft_Vth = iv_data['current'][:10], iv_data['current'][9:]
-# Threshold voltage 이전
-fp = np.polyfit(x_bef_Vth, y_bef_Vth, 7) # Data point가 9개 이므로 7차까지 해야 근사에 의미가 있음
-f = np.poly1d(fp) # Equation으로 만듬
 
 # IV data 근사하는 함수
 def fit_IV(voltage, I_s, q, nkT):
-    return I_s * (np.exp(q * voltage / nkT ) - 1)
+    return I_s * (np.exp(q * voltage / nkT) - 1)
+
+
+# Threshold voltage 기준으로 구간 설정
+x_bef_Vth, x_aft_Vth = iv_data['voltage'][:10], iv_data['voltage'][9:]
+y_bef_Vth, y_aft_Vth = iv_data['current'][:10], iv_data['current'][9:]
+
+# Threshold voltage 이전
+fp = np.polyfit(x_bef_Vth, y_bef_Vth, 8)  # Data point가 10개 이므로 8차까지 해야 근사에 의미가 있음
+f = np.poly1d(fp)  # Equation으로 만듬
 
 # Threshold voltage 이후
+I_s = iv_data['current'][0]
 model = Model(fit_IV)
-params = model.make_params(I_s=I_s, q=1, nkT=1)
-# fit the model to the data
-result = model.fit(y_aft_Vth, params, voltage=x_aft_Vth)
+params = model.make_params(I_s=I_s, q=1, nkT=1)  # 변수들을 값을 고정하거나 초기화 함
+# Fit the model to the data
+result = model.fit(y_aft_Vth, params, voltage=x_aft_Vth)  # 최고의 fitting 결과를 result에 가져옴
+# 두 개의 fitting 결과를 하나의 리스트로 합침
 y_fit = list(f(x_bef_Vth))
 y_fit.extend(result.best_fit[1:])
-residuals = np.subtract(current_abs, y_fit)
 
 # Plot data using matplotlib
 ax1.scatter('voltage', 'current', data=iv_data, color='mediumseagreen', label='data')
@@ -93,10 +97,13 @@ r2_list = []
 max_r2 = 0
 ax3.plot('wavelength', 'measured_transmission', data=wavelength_data, label='')
 # Extract wavelength at the max, min value of transmission
-transmission_max, transmission_min = max(wavelength_data['measured_transmission']), min(wavelength_data['measured_transmission'])
-wavelength_max, wavelength_min = wavelength_data['wavelength'][wavelength_data['measured_transmission'].index(transmission_max)], wavelength_data['wavelength'][wavelength_data['measured_transmission'].index(transmission_min)]
-print(f'wavelength_min: {wavelength_min}nm\n'
-      f'wavelength_max: {wavelength_max}nm')
+transmission_max, transmission_min = max(wavelength_data['measured_transmission']), min(
+    wavelength_data['measured_transmission'])
+wavelength_max, wavelength_min = wavelength_data['wavelength'][
+    wavelength_data['measured_transmission'].index(transmission_max)], wavelength_data['wavelength'][
+    wavelength_data['measured_transmission'].index(transmission_min)]
+print(f'wavelength_min: {wavelength_min}nm, transmission_min: {transmission_min}dB\n'
+      f'wavelength_max: {wavelength_max}nm, transmission_max: {transmission_max}dB')
 
 for i in range(1, 9):
     color = cmap(i / 9)
@@ -104,24 +111,32 @@ for i in range(1, 9):
     f = np.poly1d(fp)
     r2 = r2_score(wavelength_data['measured_transmission'], f(wavelength_data['wavelength']))
     r2_list.append(r2)
-    if r2_list[i-1] > max_r2:
+    if r2_list[i - 1] > max_r2:
         max_r2 = r2
     ax3.plot(wavelength_data['wavelength'], f(wavelength_data['wavelength']), color=color, lw=0.8, label=f'{i}th')
 
 for i in range(8):
-    ax3.annotate(f"R² = {r2_list[i]}", xy=(1580.7, -16 + i), ha='left', fontsize=8, color='r' if r2_list[i] == max_r2 else None)
+    ax3.annotate(f"{i+1}th R² = {r2_list[i]}", xy=(1580.7, -16 + i), ha='left', fontsize=8,
+                 color='r' if r2_list[i] == max_r2 else None)
+
+# Extract to csv
+with open('output.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Wavelength', 'Measured_transmission'])
+    for i in range(len(wavelength_data['wavelength'])):
+        writer.writerow([wavelength_data['wavelength'][i], wavelength_data['measured_transmission'][i]])
 
 detail_list = [
-    {'ax1_title': 'IV - analysis', 'ax1_titlesize': 15,
-     'ax1_xlabel': 'Voltage [V]', 'ax1_ylabel': 'Current [A]', 'ax1_size': 13, 'ax1_ticksize': 14,
+    {'ax1_title': 'IV - analysis', 'ax1_titlesize': 13,
+     'ax1_xlabel': 'Voltage [V]', 'ax1_ylabel': 'Current [A]', 'ax1_size': 11, 'ax1_ticksize': 14,
      'ax1_legendloc': 'best', 'ax1_legendncol': 1, 'ax1_legendsize': 10},
 
-    {'ax2_title': 'Transmission spectra - as measured', 'ax2_titlesize': 15,
-     'ax2_xlabel': 'Wavelength [nm]', 'ax2_ylabel': 'Measured_transmission [dB]', 'ax2_size': 13, 'ax2_ticksize': 14,
+    {'ax2_title': 'Transmission spectra - as measured', 'ax2_titlesize': 13,
+     'ax2_xlabel': 'Wavelength [nm]', 'ax2_ylabel': 'Measured_transmission [dB]', 'ax2_size': 11, 'ax2_ticksize': 14,
      'ax2_legendloc': 'lower center', 'ax2_legendncol': 3, 'ax2_legendsize': 8},
 
-    {'ax3_title': 'Transmission spectra - as measured', 'ax3_titlesize': 15,
-     'ax3_xlabel': 'Wavelength [nm]', 'ax3_ylabel': 'Measured_transmission [dB]', 'ax3_size': 13, 'ax3_ticksize': 14,
+    {'ax3_title': 'Transmission spectra - as measured', 'ax3_titlesize': 13,
+     'ax3_xlabel': 'Wavelength [nm]', 'ax3_ylabel': 'Measured_transmission [dB]', 'ax3_size': 11, 'ax3_ticksize': 14,
      'ax3_legendloc': 'lower center', 'ax3_legendncol': 3, 'ax3_legendsize': 10}
 ]
 
