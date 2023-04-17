@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Approach the path
-rootDir = ""  # Input your path
+rootDir = "../data set/"  # Input your path
 fname = 'HY202103_D07_(0,0)_LION1_DCM_LMZC.xml'  # Input file name
 WorkingDir = rootDir + fname
 
@@ -116,7 +116,7 @@ for i in range(8):
     fp = np.polyfit(data['wavelength'], data['measured_transmission'], i + 1)
     f = np.poly1d(fp)
     poly_list.append(f)
-    R2 = r2_score(data['measured_transmission'], f(data['measured_transmission']))
+    R2 = r2_score(data['measured_transmission'], f(data['wavelength']))
     axes[0][1].plot(data['wavelength'], poly_list[i](data['wavelength']), color=poly_color[i], lw=0.8, label=f'{i + 1}th')
     axes[0][1].annotate(f"R² = {R2}", xy=(1580, -8 - i))
     axes[0][1].legend(loc='lower center', ncol=3, fontsize=10)
