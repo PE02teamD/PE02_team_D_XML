@@ -171,7 +171,7 @@ plt.savefig('HY202103_D08_(0,2)_LION1_DCM_LMZC.png')
 plt.show()
 
 
-def load_data(file_root):
+def extract_lot_data(file_root):
     lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = [], [], [], [], [], [], [], [], [], []
 
     for data in root.iter():
@@ -197,7 +197,7 @@ def load_data(file_root):
     return lot, wafer, mask, test, name, date, oper, row, col, analysis_wl
 
 
-lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = load_data(root)
+lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = extract_lot_data(root)
 
 df = pd.DataFrame({'Lot': lot, 'Wafer': wafer, 'Mask': mask, 'TestSite': test, 'Name': name, 'Date': date,
                    'Script ID': f'process {test[0].split("_")[-1]}', 'Script Version': 0.1, 'Script Owner': 'D',
