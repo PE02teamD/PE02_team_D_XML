@@ -1,9 +1,11 @@
 import xml.etree.ElementTree as elemTree
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from lmfit import Model
 from sklearn.metrics import r2_score
 import pandas as pd
+import warnings
 
 # Approach the path
 rootDir = "../data set/"  # Input your path
@@ -90,24 +92,13 @@ for wavelength_sweep in root.iter('WavelengthSweep'):
 
 # Graph 3 ---------------------------------------------------------
 # Ignore RankWarning from numpy.polyfit()
-import warnings
-
 warnings.filterwarnings('ignore', message='Polyfit may be poorly conditioned', category=np.RankWarning)
 
 r2_list = []
 max_r2 = 0
 ax3.plot('wavelength', 'measured_transmission', data=wavelength_data, label='')
-# Extract wavelength at the max, min value of transmission
-transmission_max, transmission_min = max(wavelength_data['measured_transmission']), min(
-    wavelength_data['measured_transmission'])
-wavelength_max, wavelength_min = wavelength_data['wavelength'][
-    wavelength_data['measured_transmission'].index(transmission_max)], wavelength_data['wavelength'][
-    wavelength_data['measured_transmission'].index(transmission_min)]
-print(f'wavelength_min: {wavelength_min}nm, transmission_min: {transmission_min}dB\n'
-      f'wavelength_max: {wavelength_max}nm, transmission_max: {transmission_max}dB')
-
 for i in range(2, 9):
-    color = cmap(i / 9)
+    color = cmap((i-2) / 7)
     fp = np.polyfit(wavelength_data['wavelength'], wavelength_data['measured_transmission'], i)
     f = np.poly1d(fp)
     r2 = r2_score(wavelength_data['measured_transmission'], f(wavelength_data['wavelength']))
@@ -117,8 +108,13 @@ for i in range(2, 9):
     ax3.plot(wavelength_data['wavelength'], f(wavelength_data['wavelength']), color=color, lw=0.8,
              label=f'{i}th R² = {r2_list[i - 2]}')
 
+if max_r2 > 0.95:
+    error_flag = 0
+else:
+    error_flag = 1
+
 # Graph 4 ---------------------------------------------------------
-mt_ref = [abs(x) for x in wavelength_data['measured_transmission']]
+mt_fit_ref = [abs(x) for x in f(wavelength_data['wavelength'])]
 # Iterate over the first 6 WavelengthSweep elements
 for i, wavelength_sweep in enumerate(root.iter('WavelengthSweep')):
     color = cmap(i / 7)
@@ -126,7 +122,7 @@ for i, wavelength_sweep in enumerate(root.iter('WavelengthSweep')):
     # Get data from each element without ref.
     wavelength = list(map(float, wavelength_sweep.find('L').text.split(',')))
     measured_transmission = list(abs(x) for x in map(float, wavelength_sweep.find('IL').text.split(',')))
-    flat_data = [a - b for a, b in zip(mt_ref, measured_transmission)]
+    flat_data = [a - b for a, b in zip(mt_fit_ref, measured_transmission)]
     wavelength_data['wavelength'].extend(wavelength)
     wavelength_data['flat_measured_transmission'].extend(flat_data)
     # Create a scatter plot using the data
@@ -171,12 +167,13 @@ plt.savefig('HY202103_D08_(0,2)_LION1_DCM_LMZC.png')
 plt.show()
 
 
+# Extract_lot_data & csv file
 def extract_lot_data(file_root):
-    lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = [], [], [], [], [], [], [], [], [], []
-
+    lot, wafer, mask, test, name, formatted_date, oper, row, col, analysis_wl = [], [], [], [], [], [], [], [], [], []
     for data in root.iter():
         if data.tag == 'OIOMeasurement':
-            date.append(data.get('CreationDate'))
+            datetime_object = datetime.strptime(data.get('CreationDate'), '%a %b %d %H:%M:%S %Y')
+            formatted_date = datetime_object.strftime('%Y%m%d_%H%M%S')
             oper.append(data.get('Operator'))
 
         elif data.tag == 'TestSiteInfo':
@@ -194,16 +191,16 @@ def extract_lot_data(file_root):
         elif data.tag == 'ModulatorSite':
             name.append(data.find('Modulator').get('Name'))
 
-    return lot, wafer, mask, test, name, date, oper, row, col, analysis_wl
+    return lot, wafer, mask, test, name, formatted_date, oper, row, col, analysis_wl
 
 
 lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = extract_lot_data(root)
 
 df = pd.DataFrame({'Lot': lot, 'Wafer': wafer, 'Mask': mask, 'TestSite': test, 'Name': name, 'Date': date,
                    'Script ID': f'process {test[0].split("_")[-1]}', 'Script Version': 0.1, 'Script Owner': 'D',
-                   'Operator': oper, 'Row': row, 'Column': col, 'ErrorFlag': 0 if max_r2 < 0.95 else 1,
-                   'Error description': 'No Error' if 'ErrorFlag' == 1 else 'Ref. spec. Error', 'Analysis Wavelength': analysis_wl,
-                   'Rsq of Ref. spectrum (Nth)': max_r2, 'Max transmission of Ref. spec. (dB)': transmission_max,
+                   'Operator': oper, 'Row': row, 'Column': col, 'ErrorFlag': error_flag,
+                   'Error description': 'No Error' if error_flag == 0 else 'Ref. spec. Error', 'Analysis Wavelength': analysis_wl,
+                   'Rsq of Ref. spectrum (Nth)': max_r2, 'Max transmission of Ref. spec. (dB)': max(f(wavelength_data['wavelength'])),
                    'Rsq of IV': r2_score(current_abs, y_fit), 'I at -1V [A]': current_abs[4],
                    'I at 1V [A]': current_abs[-1]})
 
