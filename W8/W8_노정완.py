@@ -161,7 +161,7 @@ for i, axs in enumerate([ax1, ax2, ax3, ax4]):
     axs.grid()
 ax1.set_yscale('log', base=10)
 
-plt.savefig('HY202103_D08_(0,2)_LION1_DCM_LMZC.png')
+plt.savefig('HY202103_D08_(0,2)_LION1_DCM_LMZC.png', dpi=300)
 
 # Output graph
 plt.show()
