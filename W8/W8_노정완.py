@@ -6,6 +6,7 @@ from lmfit import Model
 from sklearn.metrics import r2_score
 import pandas as pd
 import warnings
+import os
 
 # Approach the path
 rootDir = "../data set/"  # Input your path
@@ -105,6 +106,7 @@ for i in range(2, 9):
     r2_list.append(r2)
     if r2_list[i - 2] > max_r2:
         max_r2 = r2
+        max_transmission = max(f(wavelength_data['wavelength']))
     ax3.plot(wavelength_data['wavelength'], f(wavelength_data['wavelength']), color=color, lw=0.8,
              label=f'{i}th R² = {r2_list[i - 2]}')
 
@@ -161,7 +163,7 @@ for i, axs in enumerate([ax1, ax2, ax3, ax4]):
     axs.grid()
 ax1.set_yscale('log', base=10)
 
-plt.savefig('HY202103_D08_(0,2)_LION1_DCM_LMZC.png', dpi=300)
+plt.savefig('HY202103_D07_(0,2)_LION1_DCM_LMZC.png', dpi=300)
 
 # Output graph
 plt.show()
@@ -194,14 +196,26 @@ def extract_lot_data(file_root):
     return lot, wafer, mask, test, name, formatted_date, oper, row, col, analysis_wl
 
 
+count_filename = "execution_count.txt"
+if os.path.exists(count_filename):
+    with open(count_filename, "r") as f:
+        count = float(f.read())
+else:
+    count = 0
+
+    # 실행 횟수 증가 및 저장
+count += 0.1
+with open(count_filename, "w") as f:
+    f.write(str(count))
+
 lot, wafer, mask, test, name, date, oper, row, col, analysis_wl = extract_lot_data(root)
 
 df = pd.DataFrame({'Lot': lot, 'Wafer': wafer, 'Mask': mask, 'TestSite': test, 'Name': name, 'Date': date,
-                   'Script ID': f'process {test[0].split("_")[-1]}', 'Script Version': 0.1, 'Script Owner': 'D',
+                   'Script ID': f'process {test[0].split("_")[-1]}', 'Script Version': count, 'Script Owner': 'D',
                    'Operator': oper, 'Row': row, 'Column': col, 'ErrorFlag': error_flag,
                    'Error description': 'No Error' if error_flag == 0 else 'Ref. spec. Error', 'Analysis Wavelength': analysis_wl,
-                   'Rsq of Ref. spectrum (Nth)': max_r2, 'Max transmission of Ref. spec. (dB)': max(f(wavelength_data['wavelength'])),
+                   'Rsq of Ref. spectrum (Nth)': max_r2, 'Max transmission of Ref. spec. (dB)': max_transmission,
                    'Rsq of IV': r2_score(current_abs, y_fit), 'I at -1V [A]': current_abs[4],
                    'I at 1V [A]': current_abs[-1]})
 
-df.to_csv('HY202103_D08_(0,2)_LION1_DCM_LMZC.csv', index=False)
+df.to_csv('HY202103_D07_(0,2)_LION1_DCM_LMZC.csv', index=False)
